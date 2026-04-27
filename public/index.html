@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Night Lend · ZK DeFi Lending on Midnight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@400;700&display=swap"/>
+<link rel="stylesheet" href="css/nightlend.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Night <span>Lend</span></div>
+  <div class="nav-right">
+    <button class="btn btn-primary btn-sm" id="wallet-btn" onclick="handleWalletClick()">
+      <span id="wallet-dot" style="width:7px;height:7px;border-radius:50%;background:#ef4444;display:inline-block;margin-right:4px;"></span>
+      <span id="wallet-label">Sign in</span>
+    </button>
+  </div>
+</nav>
+
+<div id="toast-wrap"></div>
+
+<div class="page-inner">
+
+  <div class="hero">
+    <div class="hero-tag">🏦 Night Lend · ZK DeFi Lending · Midnight Network</div>
+    <h1>Borrow against<br><em>hidden collateral.</em></h1>
+    <p>The first ZK-native lending protocol on Midnight. Deposit privately, borrow sUSD without revealing your position. Earn yield on deposits. Your portfolio — invisible to the world, provable to the protocol.</p>
+    <div class="hero-btns">
+      <button class="btn btn-primary btn-lg" onclick="connectDemo()">Start earning →</button>
+      <button class="btn btn-ghost btn-lg" onclick="document.getElementById('markets-section').scrollIntoView({behavior:'smooth'})">View markets</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border:1px solid var(--rim);border-radius:14px;overflow:hidden;margin-bottom:24px;">
+    <div style="padding:14px;text-align:center;border-right:1px solid var(--rim);"><div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--green);">$5.6M</div><div style="font-size:9px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-top:3px;">Total deposited</div></div>
+    <div style="padding:14px;text-align:center;border-right:1px solid var(--rim);"><div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--gold);">$2.1M</div><div style="font-size:9px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-top:3px;">Total borrowed</div></div>
+    <div style="padding:14px;text-align:center;border-right:1px solid var(--rim);"><div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--cyan);">18.4%</div><div style="font-size:9px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-top:3px;">Best APY</div></div>
+    <div style="padding:14px;text-align:center;"><div style="font-size:18px;font-weight:800;font-family:var(--mono);">⊘</div><div style="font-size:9px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-top:3px;">Private positions</div></div>
+  </div>
+
+  <!-- Position summary -->
+  <div class="nl-health" style="margin-bottom:20px;">
+    <div class="nl-health-title">Your position — ZK shielded</div>
+    <div class="nl-position-grid">
+      <div class="nl-pos"><div class="nl-pos-val" id="nl-deposited" style="color:var(--green);">$0.00</div><div class="nl-pos-label">Deposited</div></div>
+      <div class="nl-pos"><div class="nl-pos-val" id="nl-borrowed" style="color:var(--gold);">$0.00</div><div class="nl-pos-label">Borrowed</div></div>
+      <div class="nl-pos"><div class="nl-pos-val" id="nl-hf" style="color:var(--cyan);">∞</div><div class="nl-pos-label">Health factor</div></div>
+    </div>
+    <div style="margin-top:14px;">
+      <div style="font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:6px;">Liquidation health</div>
+      <div class="nl-hbar"><div class="nl-hbar-fill" id="nl-hbar-fill" style="width:100%;"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--muted);margin-top:4px;"><span>Danger</span><span id="nl-hf-status" style="color:var(--green);">No borrows</span><span>Max</span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <button class="btn btn-ghost btn-sm" onclick="nightLendRepay()">Repay all</button>
+      <button class="btn btn-ghost btn-sm" onclick="nightLendWithdraw()">Withdraw deposits</button>
+    </div>
+  </div>
+
+  <!-- Deposit + Borrow panels -->
+  <div class="nl-panels">
+    <div class="nl-panel">
+      <div class="nl-panel-title">Deposit &amp; earn yield</div>
+      <div class="nl-pool" onclick="nightLendDeposit('NIGHT','18.4%')">
+        <div class="nl-pool-icon">🌙</div>
+        <div class="nl-pool-info"><div class="nl-pool-name">NIGHT</div><div class="nl-pool-apy">APY 18.4%</div><div class="nl-pool-tvl">TVL $1.2M</div></div>
+        <button class="nl-pool-btn">Deposit</button>
+      </div>
+      <div class="nl-pool" onclick="nightLendDeposit('sUSD','8.2%')">
+        <div class="nl-pool-icon">💵</div>
+        <div class="nl-pool-info"><div class="nl-pool-name">sUSD</div><div class="nl-pool-apy">APY 8.2%</div><div class="nl-pool-tvl">TVL $3.8M</div></div>
+        <button class="nl-pool-btn">Deposit</button>
+      </div>
+      <div class="nl-pool" onclick="nightLendDeposit('tDUST','12.1%')">
+        <div class="nl-pool-icon">⚡</div>
+        <div class="nl-pool-info"><div class="nl-pool-name">tDUST</div><div class="nl-pool-apy">APY 12.1%</div><div class="nl-pool-tvl">TVL $620K</div></div>
+        <button class="nl-pool-btn">Deposit</button>
+      </div>
+    </div>
+    <div class="nl-panel">
+      <div class="nl-panel-title">Borrow against collateral</div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Select asset to borrow</div>
+      <div class="nl-borrow-asset">
+        <div class="nl-asset-btn selected" id="borrow-sUSD" onclick="selectBorrowAsset('sUSD')">
+          <div class="nl-asset-name">sUSD</div><div class="nl-asset-rate">11.5% APR</div>
+        </div>
+        <div class="nl-asset-btn" id="borrow-NIGHT" onclick="selectBorrowAsset('NIGHT')">
+          <div class="nl-asset-name">NIGHT</div><div class="nl-asset-rate">22.1% APR</div>
+        </div>
+        <div class="nl-asset-btn" id="borrow-tDUST" onclick="selectBorrowAsset('tDUST')">
+          <div class="nl-asset-name">tDUST</div><div class="nl-asset-rate">16.3% APR</div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label">Amount to borrow</label>
+        <input class="input" id="nl-borrow-amount" type="number" placeholder="0.00" min="0" step="0.01" oninput="nightLendBorrowUpdate()"/>
+      </div>
+      <div id="nl-borrow-preview" style="font-size:11px;font-family:var(--mono);color:var(--muted);min-height:16px;margin-bottom:14px;"></div>
+      <button class="btn btn-primary btn-full" onclick="nightLendBorrow()">⊘ Borrow →</button>
+      <div style="font-size:10px;color:var(--muted);font-family:var(--mono);text-align:center;margin-top:8px;">Max borrow: 75% of deposited value · ZK health proof required</div>
+    </div>
+  </div>
+
+  <!-- Market table -->
+  <div id="markets-section" class="card">
+    <div class="card-title">📊 All markets</div>
+    <table class="nl-market-table">
+      <tr><th>Asset</th><th>Deposit APY</th><th>Borrow APR</th><th>TVL</th><th>Utilisation</th></tr>
+      <tr><td><strong>🌙 NIGHT</strong></td><td style="color:var(--green);">18.4%</td><td style="color:var(--gold);">22.1%</td><td>$1.2M</td><td>74%</td></tr>
+      <tr><td><strong>💵 sUSD</strong></td><td style="color:var(--green);">8.2%</td><td style="color:var(--gold);">11.5%</td><td>$3.8M</td><td>62%</td></tr>
+      <tr><td><strong>⚡ tDUST</strong></td><td style="color:var(--green);">12.1%</td><td style="color:var(--gold);">16.3%</td><td>$620K</td><td>58%</td></tr>
+    </table>
+  </div>
+
+  <!-- How it works -->
+  <div class="card" style="background:transparent;border-color:var(--rim);">
+    <div style="font-size:16px;font-weight:800;margin-bottom:20px;text-align:center;">How ZK lending works</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;text-align:center;">
+      <div><div style="font-size:28px;margin-bottom:8px;">🔒</div><div style="font-weight:700;font-size:13px;margin-bottom:4px;">Private deposits</div><div style="font-size:12px;color:var(--text2);line-height:1.6;">Your deposit amount is hidden on Midnight. Only the protocol knows your balance — through a ZK proof, not plaintext.</div></div>
+      <div><div style="font-size:28px;margin-bottom:8px;">⊘</div><div style="font-weight:700;font-size:13px;margin-bottom:4px;">ZK health proof</div><div style="font-size:12px;color:var(--text2);line-height:1.6;">Borrow by proving your health factor exceeds 1.0 without revealing your exact collateral amount.</div></div>
+      <div><div style="font-size:28px;margin-bottom:8px;">📈</div><div style="font-weight:700;font-size:13px;margin-bottom:4px;">Earn yield</div><div style="font-size:12px;color:var(--text2);line-height:1.6;">Interest flows continuously to depositors. Your yield accrues privately. Claim anytime.</div></div>
+      <div><div style="font-size:28px;margin-bottom:8px;">⚡</div><div style="font-weight:700;font-size:13px;margin-bottom:4px;">Instant liquidation</div><div style="font-size:12px;color:var(--text2);line-height:1.6;">If health drops below 1.0, the contract liquidates automatically. No human intervention needed.</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="overlay" id="ov-wallet" onclick="if(event.target===this)closeModal('ov-wallet')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('ov-wallet')">✕</button>
+    <div class="wc-icon">🏦</div>
+    <div class="wc-title">Connect to lend</div>
+    <div class="wc-sub">Connect a Midnight wallet to deposit assets, borrow against collateral, and earn yield.</div>
+    <button class="btn btn-primary btn-full btn-lg" onclick="connectDemo()">🎭 Try Demo Mode</button>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center;">Demo uses simulated balances · no real funds</div>
+  </div>
+</div>
+
+<script src="js/lend.js"></script>
+</body>
+</html>

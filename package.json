@@ -1,0 +1,16 @@
+{
+  "name": "night-lend",
+  "version": "0.1.0",
+  "description": "ZK DeFi Lending on Midnight — borrow against hidden collateral, earn yield",
+  "scripts": {
+    "dev": "npx serve public -p 3006",
+    "compile": "compactc contracts/NightLend.compact src/nightlend_contract/"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "^1.0.0",
+    "@midnight-ntwrk/dapp-connector-api": "^2.0.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
