@@ -25,10 +25,20 @@ function saveLendState() { localStorage.setItem('nl_state', JSON.stringify(_lend
 
 var walletState = { connected: false, demo: false, address: null };
 
+async function connectLace() {
+  if (typeof nightWallet === 'undefined') { connectDemo(); return; }
+  try {
+    const state = await nightWallet.connect('lace');
+    walletState = { connected: state.connected, demo: state.demo, address: state.address };
+    closeModal('ov-wallet'); updateWalletUI();
+    toast(state.demo ? '🎭 Demo mode' : '✓ Lace connected', 'success');
+    await syncPosition(); renderPosition();
+  } catch { connectDemo(); }
+}
+
 function connectDemo() {
   walletState = { connected: true, demo: true, address: 'mn_addr_preprod1' + Math.random().toString(36).slice(2, 14) };
-  closeModal('ov-wallet');
-  updateWalletUI();
+  closeModal('ov-wallet'); updateWalletUI();
   toast('🎭 Demo mode — no real funds', 'success');
   renderPosition();
 }
@@ -37,6 +47,19 @@ function handleWalletClick() {
   if (walletState.connected) {
     if (confirm('Disconnect?')) { walletState = { connected: false, demo: false, address: null }; updateWalletUI(); }
   } else { openModal('ov-wallet'); }
+}
+
+async function syncPosition() {
+  if (!walletState.address) return;
+  try {
+    const r = await fetch(NL_API + `/api/nightlend/state/${encodeURIComponent(walletState.address)}`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      const data = await r.json();
+      _lendState.deposited = data.totalDepUSD ?? _lendState.deposited;
+      _lendState.borrowed  = data.totalBorUSD  ?? _lendState.borrowed;
+      saveLendState();
+    }
+  } catch { /* use local state */ }
 }
 
 function updateWalletUI() {
@@ -72,14 +95,20 @@ async function nightLendDeposit(asset, apy) {
   if (!walletState.connected) { openModal('ov-wallet'); return; }
   const amount = parseFloat(prompt(`Deposit ${asset} — enter amount:`) || '0');
   if (amount <= 0) return;
-  toast(`Depositing ${amount} ${asset} at ${apy} APY…`, 'info');
+  toast(`Depositing ${amount} ${asset} at ${apy}% APY…`, 'info');
   try {
-    await apiPost('/api/nightlend/deposit', { asset, amount, address: walletState.address });
-  } catch {}
-  _lendState.deposited += amount * POOLS.find(p => p.asset === asset)?.price || 0;
+    const result = await apiPost('/api/nightlend/deposit', { asset, amount, address: walletState.address });
+    if (result.position) {
+      _lendState.deposited = result.position.totalDepUSD ?? (_lendState.deposited + amount * (POOLS.find(p=>p.asset===asset)?.price||0));
+    } else {
+      _lendState.deposited += amount * (POOLS.find(p => p.asset === asset)?.price || 0);
+    }
+  } catch {
+    _lendState.deposited += amount * (POOLS.find(p => p.asset === asset)?.price || 0);
+  }
   _lendState.depositAsset = asset;
   saveLendState(); renderPosition();
-  toast(`✓ ${amount} ${asset} deposited — earning ${apy} APY`, 'success');
+  toast(`✓ ${amount} ${asset} deposited — earning ${apy}% APY`, 'success');
 }
 
 function selectBorrowAsset(asset) {
