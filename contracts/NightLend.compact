@@ -15,19 +15,13 @@ import CompactStandardLibrary;
 // Deposit ledgers per asset (commitment → balance in µ-units)
 export ledger deposit_night: Map<Bytes<32>, Uint<64>>;
 export ledger deposit_susd:  Map<Bytes<32>, Uint<64>>;
-export ledger deposit_dust:  Map<Bytes<32>, Uint<64>>;
 
 // Borrow ledgers (commitment → borrowed in µ-units, USD value)
 export ledger borrow_usd: Map<Bytes<32>, Uint<64>>; // total borrowed, USD µ-units
 
-// Interest tracking (basis points accrued per block)
-export ledger deposit_epoch: Map<Bytes<32>, Uint<64>>; // commit → last claim epoch
-export ledger accrued_yield: Map<Bytes<32>, Uint<64>>; // commit → unclaimed yield
-
 // Protocol pool totals (public)
 export ledger pool_night_total: Map<Bytes<32>, Uint<64>>; // key "pnt"
 export ledger pool_susd_total:  Map<Bytes<32>, Uint<64>>; // key "pst"
-export ledger pool_dust_total:  Map<Bytes<32>, Uint<64>>; // key "pdt"
 
 // Reentrancy guard
 export ledger reentrancy_locked: Map<Bytes<32>, Boolean>;
@@ -41,73 +35,83 @@ circuit callerCommitment(): Bytes<32> {
   return persistentHash<Vector<2, Bytes<32>>>([kernel.self().bytes, sk]);
 }
 
-circuit lock(): Void {
+circuit lock(): Boolean {
   const locked = reentrancy_locked.member(pad(32,"lock")) ? reentrancy_locked.lookup(pad(32,"lock")) : false;
   assert(!locked, "reentrant call");
   reentrancy_locked.insert(pad(32,"lock"), true);
+  return true;
 }
-circuit unlock(): Void { reentrancy_locked.insert(pad(32,"lock"), false); }
+circuit unlock(): Boolean { reentrancy_locked.insert(pad(32,"lock"), false); return true; }
 
-export circuit depositNight(amount: Uint<64>): Void {
+export circuit depositNight(amount: Uint<64>): Boolean {
   lock();
-  assert(amount > 0, "amount must be positive");
-  const commit = callerCommitment();
-  const cur    = deposit_night.member(commit) ? deposit_night.lookup(commit) : 0;
-  deposit_night.insert(commit, cur + amount);
-  const tot = pool_night_total.member(pad(32,"pnt")) ? pool_night_total.lookup(pad(32,"pnt")) : 0;
-  pool_night_total.insert(pad(32,"pnt"), tot + amount);
+  const amt    = disclose(amount);
+  const commit = disclose(callerCommitment());
+  assert(amt > 0, "amount must be positive");
+  const cur = deposit_night.member(commit) ? deposit_night.lookup(commit) : (0 as Uint<64>);
+  deposit_night.insert(commit, (cur + amt) as Uint<64>);
+  const tot = pool_night_total.member(pad(32,"pnt")) ? pool_night_total.lookup(pad(32,"pnt")) : (0 as Uint<64>);
+  pool_night_total.insert(pad(32,"pnt"), (tot + amt) as Uint<64>);
   unlock();
+  return true;
 }
 
-export circuit depositSusd(amount: Uint<64>): Void {
+export circuit depositSusd(amount: Uint<64>): Boolean {
   lock();
-  assert(amount > 0, "amount must be positive");
-  const commit = callerCommitment();
-  const cur    = deposit_susd.member(commit) ? deposit_susd.lookup(commit) : 0;
-  deposit_susd.insert(commit, cur + amount);
-  const tot = pool_susd_total.member(pad(32,"pst")) ? pool_susd_total.lookup(pad(32,"pst")) : 0;
-  pool_susd_total.insert(pad(32,"pst"), tot + amount);
+  const amt    = disclose(amount);
+  const commit = disclose(callerCommitment());
+  assert(amt > 0, "amount must be positive");
+  const cur = deposit_susd.member(commit) ? deposit_susd.lookup(commit) : (0 as Uint<64>);
+  deposit_susd.insert(commit, (cur + amt) as Uint<64>);
+  const tot = pool_susd_total.member(pad(32,"pst")) ? pool_susd_total.lookup(pad(32,"pst")) : (0 as Uint<64>);
+  pool_susd_total.insert(pad(32,"pst"), (tot + amt) as Uint<64>);
   unlock();
+  return true;
 }
 
-export circuit borrow(amountUsd: Uint<64>): Void {
+export circuit borrow(amountUsd: Uint<64>): Boolean {
   lock();
-  assert(amountUsd > 0, "amount must be positive");
-  const commit    = callerCommitment();
-  const depUsd    = callerDepositUsd();
-  const curBorrow = borrow_usd.member(commit) ? borrow_usd.lookup(commit) : 0;
-  const maxBorrow = (depUsd * 75) / 100;
-  assert(curBorrow + amountUsd <= maxBorrow, "exceeds 75% LTV");
-  borrow_usd.insert(commit, curBorrow + amountUsd);
+  const amt    = disclose(amountUsd);
+  const commit = disclose(callerCommitment());
+  const depUsd = disclose(callerDepositUsd());
+  assert(amt > 0, "amount must be positive");
+  const curBorrow = borrow_usd.member(commit) ? borrow_usd.lookup(commit) : (0 as Uint<64>);
+  assert((curBorrow + amt) * 100 <= depUsd * 75, "exceeds 75% LTV");
+  borrow_usd.insert(commit, (curBorrow + amt) as Uint<64>);
   unlock();
+  return true;
 }
 
-export circuit repayAll(): Void {
+export circuit repayAll(): Boolean {
   lock();
-  const commit = callerCommitment();
+  const commit = disclose(callerCommitment());
   assert(borrow_usd.member(commit) && borrow_usd.lookup(commit) > 0, "no borrows");
-  borrow_usd.insert(commit, 0);
+  borrow_usd.insert(commit, 0 as Uint<64>);
   unlock();
+  return true;
 }
 
-export circuit withdrawNight(amount: Uint<64>): Void {
+export circuit withdrawNight(amount: Uint<64>): Boolean {
   lock();
-  const commit  = callerCommitment();
-  const balance = deposit_night.member(commit) ? deposit_night.lookup(commit) : 0;
-  const borrows = borrow_usd.member(commit)    ? borrow_usd.lookup(commit)    : 0;
+  const amt    = disclose(amount);
+  const commit = disclose(callerCommitment());
+  const balance = deposit_night.member(commit) ? deposit_night.lookup(commit) : (0 as Uint<64>);
+  const borrows = borrow_usd.member(commit)    ? borrow_usd.lookup(commit)    : (0 as Uint<64>);
   assert(borrows == 0, "repay borrows first");
-  assert(balance >= amount, "insufficient deposit");
-  deposit_night.insert(commit, balance - amount);
-  const tot = pool_night_total.member(pad(32,"pnt")) ? pool_night_total.lookup(pad(32,"pnt")) : 0;
-  pool_night_total.insert(pad(32,"pnt"), tot > amount ? tot - amount : 0);
+  assert(balance >= amt, "insufficient deposit");
+  deposit_night.insert(commit, (balance - amt) as Uint<64>);
+  const tot = pool_night_total.member(pad(32,"pnt")) ? pool_night_total.lookup(pad(32,"pnt")) : (0 as Uint<64>);
+  assert(tot >= amt, "pool underflow");
+  pool_night_total.insert(pad(32,"pnt"), (tot - amt) as Uint<64>);
   unlock();
+  return true;
 }
 
 export circuit proveHealthy(): Boolean {
-  const commit  = callerCommitment();
-  const depUsd  = callerDepositUsd();
-  const borUsd  = callerBorrowUsd();
-  const maxBor  = (depUsd * 75) / 100;
-  assert(borUsd <= maxBor, "position underwater");
+  const commit = disclose(callerCommitment());
+  const depUsd = disclose(callerDepositUsd());
+  const borUsd = disclose(callerBorrowUsd());
+  assert(deposit_night.member(commit), "no deposit");
+  assert(borUsd * 100 <= depUsd * 75, "position underwater");
   return true;
 }
