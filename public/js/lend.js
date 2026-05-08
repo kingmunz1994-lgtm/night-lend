@@ -1,5 +1,18 @@
 // ── Night Lend — ZK DeFi Lending ──────────────────────────────
 
+const NIGHT_ID_API = 'https://night-markets-94-production.up.railway.app';
+async function recordAction(points) {
+  const addr = walletState?.address;
+  if (!addr) return;
+  try {
+    await fetch(`${NIGHT_ID_API}/api/nightid/record-action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ holderAddress: addr, appId: 'night-lend', points }),
+    });
+  } catch (_) {}
+}
+
 var NL_API = 'http://127.0.0.1:3001';
 var _apiReady = null;
 async function apiCheck() {
@@ -150,6 +163,7 @@ async function nightLendBorrow() {
   _lendState.borrowed += usdVal;
   saveLendState(); renderPosition();
   toast(`✓ ${amount} ${_borrowAsset} borrowed — check your wallet`, 'success');
+  recordAction(30);
 }
 
 async function nightLendRepay() {
