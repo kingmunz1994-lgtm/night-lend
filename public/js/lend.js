@@ -122,6 +122,7 @@ async function nightLendDeposit(asset, apy) {
   _lendState.depositAsset = asset;
   saveLendState(); renderPosition();
   toast(`✓ ${amount} ${asset} deposited — earning ${apy}% APY`, 'success');
+  recordAction(20);
 }
 
 function selectBorrowAsset(asset) {
@@ -172,6 +173,7 @@ async function nightLendRepay() {
   try { await apiPost('/api/nightlend/repay', { address: walletState.address }); } catch {}
   _lendState.borrowed = 0; saveLendState(); renderPosition();
   toast('✓ All positions repaid', 'success');
+  recordAction(15);
 }
 
 async function nightLendWithdraw() {
@@ -181,6 +183,7 @@ async function nightLendWithdraw() {
   try { await apiPost('/api/nightlend/withdraw', { address: walletState.address }); } catch {}
   _lendState.deposited = 0; saveLendState(); renderPosition();
   toast('✓ Deposits withdrawn', 'success');
+  recordAction(10);
 }
 
 function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
